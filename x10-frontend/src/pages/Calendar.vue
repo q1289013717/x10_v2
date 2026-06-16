@@ -1,5 +1,5 @@
 <template>
-  <AppLayout current-page="calendar" title="X10成长日程" :subtitle="companyName">
+  <AppLayout current-page="calendar" title="X10成长日程" :subtitle="companyName" @update:subtitle="onSubtitleUpdate">
     <template #actions>
       <!-- 视图切换 -->
       <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
@@ -962,7 +962,19 @@ function handleDrop(e: DragEvent, targetDateKey: string) {
   draggedTask.value = null
 }
 
-// 公司名称
+// 公司名称 - 副标题更新回调
+function onSubtitleUpdate(newVal: string) {
+  companyName.value = newVal
+  // 同时保存到两个 key：兼容旧代码和 AppLayout 的新 key
+  localStorage.setItem('company_name', newVal)
+  try {
+    const key = 'page_subtitle_calendar'
+    const saved = JSON.parse(localStorage.getItem(key) || '{}')
+    saved.customSubtitle = newVal
+    localStorage.setItem(key, JSON.stringify(saved))
+  } catch {}
+}
+
 async function saveCompanyName() {
   localStorage.setItem('company_name', companyName.value)
   showToast('保存成功', '公司名称已更新')
@@ -985,8 +997,21 @@ watch([currentYear, currentMonth], async () => {
 
 // 生命周期
 onMounted(async () => {
-  const saved = localStorage.getItem('company_name')
-  if (saved) companyName.value = saved
+  // 恢复公司名称：优先从 page_subtitle_calendar 读取 AppLayout 编辑过的值
+  const calendarSubtitle = localStorage.getItem('page_subtitle_calendar')
+  if (calendarSubtitle) {
+    try {
+      const parsed = JSON.parse(calendarSubtitle)
+      if (parsed.customSubtitle) {
+        companyName.value = parsed.customSubtitle
+        localStorage.setItem('company_name', parsed.customSubtitle)
+      }
+    } catch {}
+  }
+  if (companyName.value === '涌动花鱼科技有限公司') {
+    const saved = localStorage.getItem('company_name')
+    if (saved) companyName.value = saved
+  }
 
   document.addEventListener('click', handleGlobalClick)
 

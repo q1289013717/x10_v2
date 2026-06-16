@@ -280,27 +280,32 @@ async function saveResource() {
   if (!resource.value.name) return
   loading.value = true
   try {
-    // 组装后端字段（snake_case）
+    // 组装后端字段 — 必须匹配后端 DarenResourceCreate schema
+    const platformVal = resource.value.platform === '其他' ? (resource.value.platformOther || '其他') : resource.value.platform
+    const categoryVal = resource.value.category === '其他' ? (resource.value.categoryOther || '其他') : resource.value.category
     const payload: any = {
       name: resource.value.name,
-      daren_id: resource.value.code,
-      account_name: resource.value.accountName,
-      platform: resource.value.platform === '其他' ? (resource.value.platformOther || '其他') : resource.value.platform,
-      contact: resource.value.phone,
-      wechat: resource.value.wechat,
-      fans_count: parseFloat(resource.value.fansCount) || 0,
-      category: resource.value.category === '其他' ? (resource.value.categoryOther || '其他') : resource.value.category,
-      fans_profile: resource.value.fansProfile,
-      gmv_monthly: parseFloat(resource.value.gmv) || 0,
-      reach_channel: resource.value.reachChannel,
-      first_contact_time: resource.value.firstContactTime || null,
-      last_follow_time: resource.value.lastFollowTime || null,
-      next_follow_time: resource.value.nextFollowTime || null,
-      // 保存原始选择值和自填值（用extra_data扩展字段）
-      platform_raw: resource.value.platform,
-      platform_other: resource.value.platformOther,
-      category_raw: resource.value.category,
-      category_other: resource.value.categoryOther,
+      date: resource.value.date || new Date().toISOString().split('T')[0],
+      daren_id: resource.value.code || `DR${Date.now()}`,
+      daren_name: resource.value.accountName || resource.value.name,
+      platform: platformVal,
+      contact: resource.value.phone || resource.value.wechat || '',
+      followers: String(parseFloat(resource.value.fansCount) || 0),
+      categories: [categoryVal],
+      fan_portrait: resource.value.fansProfile || '',
+      gmv: String(parseFloat(resource.value.gmv) || 0),
+      channel: resource.value.reachChannel || '',
+      first_contact_date: resource.value.firstContactTime || resource.value.date || '',
+      latest_follow_date: resource.value.lastFollowTime || '',
+      next_follow_date: resource.value.nextFollowTime || '',
+      // 微信和原始选择值存到 remarks
+      remarks: JSON.stringify({
+        wechat: resource.value.wechat || '',
+        platform_raw: resource.value.platform,
+        platform_other: resource.value.platformOther,
+        category_raw: resource.value.category,
+        category_other: resource.value.categoryOther,
+      }),
     }
     await api.post('/daren/resources', payload)
     resource.value = { ...EMPTY_RESOURCE, date: new Date().toISOString().split('T')[0] }
@@ -334,23 +339,29 @@ async function fetchResources() {
   loading.value = true
   try {
     const res = await api.get('/daren/resources', { params: { limit: 200 } })
-    resources.value = (res.data || []).map((r: any) => ({
-      ...r,
-      // 映射字段
-      code: r.daren_id || r.code,
-      accountName: r.account_name || r.accountName,
-      phone: r.contact || r.phone,
-      fansCount: r.fans_count || r.fansCount,
-      fansProfile: r.fans_profile || r.fansProfile,
-      gmv: r.gmv_monthly || r.gmv,
-      reachChannel: r.reach_channel || r.reachChannel,
-      firstContactTime: r.first_contact_time || r.firstContactTime,
-      lastFollowTime: r.last_follow_time || r.lastFollowTime,
-      nextFollowTime: r.next_follow_time || r.nextFollowTime,
-      platformOther: r.platform_other || '',
-      categoryOther: r.category_other || '',
-      is_mine: true, // 暂时标记，后端会返回created_by
-    }))
+    resources.value = (res.data || []).map((r: any) => {
+      // 从 remarks 恢复微信等扩展字段
+      let extra: any = {}
+      try { if (r.remarks) extra = JSON.parse(r.remarks) } catch {}
+      return {
+        ...r,
+        code: r.daren_id || '',
+        accountName: r.daren_name || '',
+        phone: r.contact || '',
+        wechat: extra.wechat || '',
+        fansCount: parseFloat(r.followers) || 0,
+        fansProfile: r.fan_portrait || '',
+        gmv: parseFloat(r.gmv) || 0,
+        reachChannel: r.channel || '',
+        firstContactTime: r.first_contact_date || '',
+        lastFollowTime: r.latest_follow_date || '',
+        nextFollowTime: r.next_follow_date || '',
+        platformOther: extra.platform_other || '',
+        categoryOther: extra.category_other || '',
+        category: (r.categories || []).join(', ') || '',
+        is_mine: true,
+      }
+    })
   } catch {
     // 降级到本地
     const saved = localStorage.getItem('daren_resources')

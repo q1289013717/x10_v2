@@ -21,4 +21,4 @@ COPY x10-backend/ .
 COPY --from=frontend-builder /app/frontend/dist ./static
 
 # CloudBase 云托管使用 $PORT 环境变量传递端口
-CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"
