@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+x10.db
+*.db
+.git/
+.gitignore
+*.md
+venv/
+.venv/
+.workbuddy/

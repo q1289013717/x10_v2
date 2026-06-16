@@ -1,0 +1,79 @@
+/* 全局响应式优化 - 支持手机端、平板端和折叠屏 */
+
+/* 基础响应式设置 */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* 优化触摸目标大小（至少 44px）*/
+button, a, input[type="button"], input[type="submit"], select, textarea {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 移动端输入框优化（防止 iOS 自动缩放）*/
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* 折叠屏优化（非常小屏幕，如 280px-360px）*/
+@media screen and (max-width: 360px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* 优化横向滚动容器 */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* 优化底部导航在移动端的显示 */
+@media screen and (max-width: 640px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+/* 安全区域适配（iPhone X 及以上）*/
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}

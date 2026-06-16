@@ -1,0 +1,28 @@
+# 本地测试用 — 启动 PostgreSQL + FastAPI
+# 使用方式: docker compose up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: x10
+      POSTGRES_PASSWORD: x10_secret
+      POSTGRES_DB: x10db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://x10:x10_secret@db:5432/x10db
+      SECRET_KEY: x10-dev-secret-key-change-in-production
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5176
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

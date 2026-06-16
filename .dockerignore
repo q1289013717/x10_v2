@@ -1,0 +1,15 @@
+# 前端依赖（由 Docker 内部 npm install）
+x10-frontend/node_modules
+x10-frontend/dist
+
+# 后端运行时文件
+x10-backend/__pycache__
+x10-backend/**/__pycache__
+x10-backend/.env
+x10-backend/x10.db
+
+# IDE
+.git
+.vscode
+.idea
+*.pyc
