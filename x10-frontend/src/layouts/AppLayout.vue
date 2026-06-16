@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import BottomNav from '@/components/BottomNav.vue'
@@ -102,6 +102,7 @@ function saveTitle() {
   const newVal = localTitle.value.trim()
   if (newVal && newVal !== props.title) {
     emit('update:title', newVal)
+    syncSidebarMenu(props.currentPage, newVal)
     // 持久化到 localStorage
     try {
       const key = `page_subtitle_${props.currentPage}`
@@ -145,6 +146,31 @@ function saveSubtitle() {
 function cancelEditSubtitle() {
   localSubtitle.value = props.subtitle
   editingSubtitle.value = false
+}
+
+// ========== 同步：当父组件更新 prop 时，同步本地状态 ==========
+watch(() => props.title, (newVal) => {
+  localTitle.value = newVal
+})
+watch(() => props.subtitle, (newVal) => {
+  localSubtitle.value = newVal
+})
+
+// ========== 侧边栏菜单同步 ==========
+function syncSidebarMenu(menuId: string, label: string) {
+  try {
+    const saved = localStorage.getItem('sidebar_menu_items')
+    if (saved) {
+      const items = JSON.parse(saved)
+      const idx = items.findIndex((m: any) => m.id === menuId)
+      if (idx >= 0) {
+        items[idx].label = label
+        localStorage.setItem('sidebar_menu_items', JSON.stringify(items))
+        // 通知侧边栏刷新
+        window.dispatchEvent(new CustomEvent('sidebar-menu-updated'))
+      }
+    }
+  } catch {}
 }
 
 function checkMobile() {

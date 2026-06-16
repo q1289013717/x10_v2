@@ -4,17 +4,17 @@
       <div class="flex items-center gap-2">
         <h1 v-if="!editingTitle" class="font-bold text-slate-900 text-lg lg:text-xl tracking-tight truncate">{{ pageTitle }}</h1>
         <input v-else v-model="pageTitle" @blur="saveTitle" @keyup.enter="saveTitle" class="font-bold text-slate-900 text-lg lg:text-xl border-b-2 border-blue-500 outline-none bg-transparent w-48" />
-        <button @click="editingTitle = true" class="text-slate-400 hover:text-blue-600 text-sm" title="编辑标题">✎</button>
+        <button v-if="isAdmin" @click="editingTitle = true" class="text-slate-400 hover:text-blue-600 text-sm" title="编辑标题">✎</button>
       </div>
       <div class="flex items-center gap-2 mt-0.5">
         <p v-if="!editingSubtitle" class="text-xs text-slate-400 truncate">{{ pageSubtitle }}</p>
         <input v-else v-model="pageSubtitle" @blur="saveSubtitle" @keyup.enter="saveSubtitle" class="text-xs text-slate-400 border-b border-blue-500 outline-none bg-transparent w-64" />
-        <button @click="editingSubtitle = true" class="text-slate-400 hover:text-blue-600 text-xs" title="编辑副标题">✎</button>
+        <button v-if="isAdmin" @click="editingSubtitle = true" class="text-slate-400 hover:text-blue-600 text-xs" title="编辑副标题">✎</button>
       </div>
     </template>
     <template #actions>
-      <router-link to="/influencer-summary" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700">📊 汇总统计</router-link>
-      <button @click="openForm()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700">+ 新增记录</button>
+      <router-link v-if="isAdmin" to="/influencer-summary" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700">📊 汇总统计</router-link>
+      <button v-if="isAdmin" @click="openForm()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700">+ 新增记录</button>
     </template>
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- 筛选 -->
@@ -40,7 +40,7 @@
               <th class="px-3 py-3 text-right text-sm font-semibold text-slate-600 whitespace-nowrap">GMV(元)</th>
               <th class="px-3 py-3 text-right text-sm font-semibold text-slate-600 whitespace-nowrap">ROI</th>
               <th class="px-3 py-3 text-center text-sm font-semibold text-slate-600 whitespace-nowrap">支付状态</th>
-              <th class="px-3 py-3 text-center text-sm font-semibold text-slate-600 whitespace-nowrap">操作</th>
+              <th v-if="isAdmin" class="px-3 py-3 text-center text-sm font-semibold text-slate-600 whitespace-nowrap">操作</th>
             </tr></thead>
             <tbody>
               <tr v-for="r in paginatedRecords" :key="r.id" class="border-b border-slate-50 hover:bg-slate-50/50">
@@ -51,7 +51,7 @@
                 <td class="px-3 py-3 text-right text-sm font-medium">¥{{ formatNum(r.gmv || 0) }}</td>
                 <td class="px-3 py-3 text-right text-sm">{{ r.roi || '-' }}</td>
                 <td class="px-3 py-3 text-center"><span :class="getPayStatusClass(r.pay_status || r.payStatus || '未支付')">{{ r.pay_status || r.payStatus || '未支付' }}</span></td>
-                <td class="px-3 py-3 text-center">
+                <td v-if="isAdmin" class="px-3 py-3 text-center">
                   <button @click="editRecord(r)" class="text-blue-600 hover:text-blue-700 text-sm mr-2" title="编辑">✎</button>
                   <button @click="deleteRecord(r.id)" class="text-red-500 hover:text-red-600 text-sm" title="删除">🗑</button>
                 </td>
@@ -232,7 +232,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
 
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
@@ -248,11 +252,28 @@ const pageSubtitle = ref(localStorage.getItem('influencer_page_subtitle') || '�
 
 function saveTitle() {
   localStorage.setItem('influencer_page_title', pageTitle.value)
+  syncSidebarMenu('influencer-list', pageTitle.value)
   editingTitle.value = false
 }
 function saveSubtitle() {
   localStorage.setItem('influencer_page_subtitle', pageSubtitle.value)
   editingSubtitle.value = false
+}
+
+/** 将页面标题同步到侧边栏菜单的 localStorage */
+function syncSidebarMenu(menuId: string, label: string) {
+  try {
+    const saved = localStorage.getItem('sidebar_menu_items')
+    if (saved) {
+      const items = JSON.parse(saved)
+      const idx = items.findIndex((m: any) => m.id === menuId)
+      if (idx >= 0) {
+        items[idx].label = label
+        localStorage.setItem('sidebar_menu_items', JSON.stringify(items))
+        window.dispatchEvent(new CustomEvent('sidebar-menu-updated'))
+      }
+    }
+  } catch {}
 }
 
 const platforms = ['抖音', '快手', '小红书', '视频号', '淘宝直播', '其他']
@@ -433,5 +454,8 @@ async function deleteRecord(id: string) {
   }
 }
 
-onMounted(fetchRecords)
+onMounted(() => {
+  authStore.restore()
+  fetchRecords()
+})
 </script>

@@ -366,6 +366,8 @@ onMounted(() => {
   if (saved) motivation.value = saved
   fetchAlertCount()
   alertTimer = setInterval(fetchAlertCount, 60000) // 每分钟刷新
+  // 监听页面标题变更事件，实时刷新菜单
+  window.addEventListener('sidebar-menu-updated', reloadMenuItems)
 })
 
 onUnmounted(() => {
@@ -373,5 +375,10 @@ onUnmounted(() => {
     clearInterval(alertTimer)
     alertTimer = null
   }
+  window.removeEventListener('sidebar-menu-updated', reloadMenuItems)
 })
+
+function reloadMenuItems() {
+  menuItems.value = loadMenuItems()
+}
 </script>
